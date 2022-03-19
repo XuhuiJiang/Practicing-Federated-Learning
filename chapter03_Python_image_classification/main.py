@@ -1,26 +1,21 @@
-import argparse, json
-import datetime
-import os
-import logging
-import torch, random
 
-from server import *
+import argparse
+import json
+import random
+
+import datasets
 from client import *
-import models, datasets
-
-	
+from server import *
 
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description='Federated Learning')
 	parser.add_argument('-c', '--conf', dest='conf')
 	args = parser.parse_args()
-	
 
 	with open(args.conf, 'r') as f:
 		conf = json.load(f)	
-	
-	
+
 	train_datasets, eval_datasets = datasets.get_dataset("./data/", conf["type"])
 	
 	server = Server(conf, eval_datasets)
@@ -44,18 +39,9 @@ if __name__ == '__main__':
 			
 			for name, params in server.global_model.state_dict().items():
 				weight_accumulator[name].add_(diff[name])
-				
-		
+
 		server.model_aggregate(weight_accumulator)
 		
 		acc, loss = server.model_eval()
 		
 		print("Epoch %d, acc: %f, loss: %f\n" % (e, acc, loss))
-				
-			
-		
-		
-	
-		
-		
-	
