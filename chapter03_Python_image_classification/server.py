@@ -2,20 +2,25 @@
 import models
 import torch
 
+import torchvision.models.detection as detection
+
 
 class Server(object):
 	
 	def __init__(self, conf, eval_dataset):
 	
-		self.conf = conf 
-		
-		self.global_model = models.get_model(self.conf["model_name"]) 
+		self.conf = conf
+		# weights = detection.MaskRCNN_ResNet50_FPN_Weights.DEFAULT
+		# model = detection.maskrcnn_resnet50_fpn(weights=weights)
+		# self.global_model=detection.maskrcnn_resnet50_fpn(weights=weights)
+		self.global_model = models.get_model(self.conf["model_name"])
 		
 		self.eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=self.conf["batch_size"], shuffle=True)
 
+
 	def model_aggregate(self, weight_accumulator):
 		for name, data in self.global_model.state_dict().items():
-			
+
 			update_per_layer = weight_accumulator[name] * self.conf["lambda"]
 			
 			if data.type() != update_per_layer.type():
@@ -37,9 +42,11 @@ class Server(object):
 				data = data.cuda()
 				target = target.cuda()
 
+
 			output = self.global_model(data)
 			
-			total_loss += torch.nn.functional.cross_entropy(output, target,	reduction='sum').item() # sum up batch loss
+			total_loss += torch.nn.functional.cross_entropy(output, target,
+											  reduction='sum').item() # sum up batch loss
 			pred = output.data.max(1)[1]  # get the index of the max log-probability
 			correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
 
